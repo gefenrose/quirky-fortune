@@ -228,9 +228,6 @@
       const yStart = yTop + (yBottom - yTop - blockH) / 2 + size * 0.8;
       ctx.fillStyle = '#1a1a1a';
       lines.forEach((ln, i) => ctx.fillText(ln.trim(), 540, yStart + i * lineH));
-      ctx.fillStyle = 'rgba(142,142,147,.65)';
-      ctx.font = '500 30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      ctx.fillText('quirky-fortune.app', 540, cy + ch - 38);
       const link = document.createElement('a');
       link.download = 'quirky-fortune.png'; link.href = canvas.toDataURL('image/png'); link.click();
     };
