@@ -96,6 +96,23 @@
     .blob-a { width: 270px; height: 270px; top: 40%; left: 22%; animation: blob3 24s ease-in-out infinite; }
     .blob-b { width: 200px; height: 200px; top: 16%; right: 16%; animation: blob4 17s ease-in-out infinite; }
     .fortune-animate { animation: fortune-in .45s cubic-bezier(.22,.61,.36,1); }
+    .chat { margin-top: 20px; }
+    .chat-msgs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .chat-msg { padding: 11px 15px; border-radius: 20px; font-size: 15px; line-height: 1.45; max-width: 86%; }
+    .chat-msg.user { background: rgba(255,255,255,.28); align-self: flex-end; color: white; border-bottom-right-radius: 5px; }
+    .chat-msg.ai { background: white; align-self: flex-start; color: #1a1a1a; border-bottom-left-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+    .chat-row { display: flex; gap: 8px; }
+    .chat-in { flex: 1; border: none; border-radius: 22px; padding: 12px 16px; font: inherit; font-size: 15px; background: rgba(255,255,255,.22); color: white; outline: none; min-width: 0; }
+    .chat-in::placeholder { color: rgba(255,255,255,.55); }
+    .chat-in:focus { background: rgba(255,255,255,.3); }
+    .chat-btn { border: none; border-radius: 22px; padding: 12px 20px; background: white; color: #1a1a1a; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .chat-btn:disabled { opacity: .45; cursor: default; }
+    .chat-note { font-size: 13px; color: rgba(255,255,255,.62); text-align: center; margin: 8px 0 0; }
+    .chat-key { background: rgba(255,255,255,.15); border-radius: 22px; padding: 16px; backdrop-filter: blur(8px); }
+    .chat-key p { margin: 0 0 10px; color: rgba(255,255,255,.88); font-size: 14px; text-align: center; }
+    .chat-key-row { display: flex; gap: 8px; }
+    .chat-key-in { flex: 1; border: none; border-radius: 14px; padding: 11px 14px; font: inherit; font-size: 14px; background: rgba(255,255,255,.22); color: white; outline: none; min-width: 0; }
+    .chat-key-in::placeholder { color: rgba(255,255,255,.5); }
   </style>
 </head>
 <body>
@@ -115,6 +132,7 @@
           <button class="icon-button" id="download" aria-label="Download image"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
         </div>
       </article>
+      <div id="chatBox" class="chat"></div>
     </section>
     <section id="profile" class="screen">
       <div class="profile">
@@ -158,6 +176,7 @@
     const hash = value => Math.abs([...value].reduce((h, ch) => ((h << 5) - h + ch.charCodeAt(0)) | 0, 0));
     const get = (key, fallback) => JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
     const set = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+    let chatHistory = [], chatCount = 0;
     let instance = localStorage.getItem('qf-instance');
     if (!instance) { instance = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,10); localStorage.setItem('qf-instance', instance); }
     function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'; }
@@ -172,7 +191,7 @@
     function renderProfile() { const data = profile(); const name = (data.name || 'User').trim() || 'User'; $('#profileNameInput').value = name; $('#avatar').src = data.photo || defaultAvatar(); }
     function applyTheme(tone) { const r = document.documentElement; r.classList.remove('theme-Earnest','theme-Playful','theme-Mixed'); if (tone) r.classList.add('theme-' + tone); }
     function animateFortune() { const el = $('#fortune'); el.classList.remove('fortune-animate'); void el.offsetWidth; el.classList.add('fortune-animate'); }
-    function render() { const fortune = currentFortune(); saveFortune(fortune); $('#greeting').textContent = greeting(); $('#date').textContent = formatDate(fortune.date); $('#tone').textContent = fortune.tone; $('#fortune').textContent = fortune.text; applyTheme(fortune.tone); animateFortune(); $('#refresh').disabled = dailyState().refreshCount >= 2; renderProfile(); }
+    function render() { const fortune = currentFortune(); saveFortune(fortune); $('#greeting').textContent = greeting(); $('#date').textContent = formatDate(fortune.date); $('#tone').textContent = fortune.tone; $('#fortune').textContent = fortune.text; applyTheme(fortune.tone); animateFortune(); $('#refresh').disabled = dailyState().refreshCount >= 2; renderProfile(); chatHistory = []; chatCount = 0; renderChat(); }
     function toast(msg) { $('#toast').textContent = msg; $('#toast').classList.add('show'); setTimeout(() => $('#toast').classList.remove('show'), 2200); }
     function openModal(id) { $('#' + id).classList.add('active'); render(); }
     function closeModal(id) { $('#' + id).classList.remove('active'); }
@@ -235,6 +254,9 @@
     function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
     function drawFlowerIcon(ctx, cx, cy, r) { const n = 6, oR = r, iR = r * 0.68; const pts = Array.from({length: n * 2}, (_, i) => { const a = (i * Math.PI / n) - Math.PI / 2; const rad = i % 2 === 0 ? oR : iR; return [cx + Math.cos(a) * rad, cy + Math.sin(a) * rad, a]; }); ctx.save(); ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 0; i < pts.length; i++) { const [x0, y0, a0] = pts[i]; const [x1, y1, a1] = pts[(i + 1) % pts.length]; const isOut = i % 2 === 0; const h0 = isOut ? oR * 0.44 : iR * 0.18; const h1 = isOut ? iR * 0.18 : oR * 0.44; ctx.bezierCurveTo(x0 - Math.sin(a0) * h0, y0 + Math.cos(a0) * h0, x1 + Math.sin(a1) * h1, y1 - Math.cos(a1) * h1, x1, y1); } ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fill(); ctx.restore(); }
     function wrapLines(ctx, text, maxWidth) { const words = text.split(' '); const lines = []; let line = ''; for (const w of words) { const t = line + w + ' '; if (ctx.measureText(t).width > maxWidth && line) { lines.push(line); line = w + ' '; } else line = t; } if (line) lines.push(line); return lines; }
+    function apiKey() { return localStorage.getItem('qf-api-key') || ''; }
+    function renderChat() { const box = $('#chatBox'); if (!apiKey()) { box.innerHTML = '<div class="chat-key"><p>Chat with your fortune using Claude.</p><div class="chat-key-row"><input class="chat-key-in" id="chatKeyIn" type="password" placeholder="sk-ant-…" autocomplete="off"><button class="chat-btn" id="chatKeySave">Add key</button></div></div>'; $('#chatKeySave').onclick = () => { const v = $('#chatKeyIn').value.trim(); if (!v) return; localStorage.setItem('qf-api-key', v); renderChat(); }; return; } const msgHtml = chatHistory.map(m => '<div class="chat-msg ' + (m.role === 'user' ? 'user' : 'ai') + '">' + m.content.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>').join(''); const done = chatCount >= 3; const rem = 3 - chatCount; box.innerHTML = '<div class="chat-msgs" id="chatMsgs">' + msgHtml + '</div>' + (done ? '<p class="chat-note">That\'s all for today — see you tomorrow!</p>' : '<div class="chat-row" id="chatRow"><input class="chat-in" id="chatIn" type="text" placeholder="Ask about your fortune…" maxlength="200"><button class="chat-btn" id="chatAsk">Ask</button></div><p class="chat-note" id="chatNote">' + rem + ' question' + (rem === 1 ? '' : 's') + ' remaining</p>'); if (!done) { $('#chatAsk').onclick = sendChat; $('#chatIn').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } }; } }
+    async function sendChat() { const input = $('#chatIn'), ask = $('#chatAsk'), msg = input.value.trim(); if (!msg) return; input.value = ''; input.disabled = ask.disabled = true; chatHistory.push({ role: 'user', content: msg }); chatCount++; const msgs = $('#chatMsgs'); msgs.insertAdjacentHTML('beforeend', '<div class="chat-msg user">' + msg.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div><div class="chat-msg ai" id="chatThinking">…</div>'); msgs.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); try { const fortune = currentFortune(); const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': apiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true', 'content-type': 'application/json' }, body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, system: 'You are a warm, witty fortune interpreter. The user\'s fortune today is: "' + fortune.text + '". Answer their question in 1-3 sentences, keeping it playful and warm.', messages: chatHistory }) }); if (!res.ok) throw new Error('HTTP ' + res.status); const data = await res.json(); const reply = data.content[0].text; chatHistory.push({ role: 'assistant', content: reply }); const thinking = $('#chatThinking'); thinking.id = ''; thinking.textContent = reply; thinking.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); if (chatCount >= 3) { $('#chatRow').remove(); $('#chatNote').textContent = 'That\'s all for today — see you tomorrow!'; } else { const rem = 3 - chatCount; $('#chatNote').textContent = rem + ' question' + (rem === 1 ? '' : 's') + ' remaining'; input.disabled = ask.disabled = false; input.focus(); } } catch(e) { chatHistory.pop(); chatCount--; const th = $('#chatThinking'); if (th) th.remove(); input.disabled = ask.disabled = false; toast('Couldn\'t reach AI — check your API key.'); } }
     if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
     render();
   </script>
