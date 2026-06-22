@@ -1,5 +1,13 @@
-const CACHE_NAME = 'quirky-fortune-v3';
-const APP_ASSETS = ['./', './index.html', './manifest.webmanifest', './assets/icon.png', './assets/favicon.png'];
+const CACHE_NAME = 'quirky-fortune-v4';
+const APP_ASSETS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './apple-touch-icon.png',
+  './icon-192x192.png',
+  './icon-512x512.png',
+  './maskable-icon-512x512.png'
+];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_ASSETS)));
   self.skipWaiting();
