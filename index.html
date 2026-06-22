@@ -193,9 +193,49 @@
     $('#resetProfilePhoto').onclick = () => { saveProfile({ photo: '' }); $('#profilePhotoInput').value = ''; toast('Profile photo reset.'); };
     $('#refresh').onclick = () => { const state = dailyState(); if (state.refreshCount >= 2) return toast('You used your extra fortunes for today.'); state.refreshCount += 1; state.variant += 1; set('qf-daily', state); render(); };
     $('#share').onclick = async () => { const fortune = currentFortune(); const text = `${fortune.text}\n\n— Quirky Fortune`; if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('Copied fortune to clipboard.'); } };
-    $('#download').onclick = () => { const fortune = currentFortune(); const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1080; const ctx = canvas.getContext('2d'); const g = ctx.createLinearGradient(0,0,0,1080); g.addColorStop(0,'#5bb3ff'); g.addColorStop(.55,'#3a8fe8'); g.addColorStop(1,'#2b7fd4'); ctx.fillStyle = g; ctx.fillRect(0,0,1080,1080); ctx.fillStyle = '#fff'; ctx.font = '700 56px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✿ Quirky Fortune', 540, 180); roundRect(ctx, 120, 270, 840, 560, 72); ctx.fill(); ctx.fillStyle = '#8e8e93'; ctx.font = '42px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'; ctx.fillText(formatDate(fortune.date), 540, 360); ctx.fillStyle = '#1a1a1a'; ctx.font = '650 58px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'; wrap(ctx, fortune.text, 180, 480, 720, 76); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = '600 36px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'; ctx.fillText('quirky-fortune.app', 540, 940); const link = document.createElement('a'); link.download = 'quirky-fortune.png'; link.href = canvas.toDataURL('image/png'); link.click(); };
+    $('#download').onclick = () => {
+      const fortune = currentFortune();
+      const cs = getComputedStyle(document.documentElement);
+      const colTop    = cs.getPropertyValue('--sky-top').trim()    || '#5bb3ff';
+      const colBottom = cs.getPropertyValue('--sky-bottom').trim() || '#3a8fe8';
+      const colDeep   = cs.getPropertyValue('--sky-deep').trim()   || '#2b7fd4';
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080; canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      ctx.textAlign = 'center';
+      const g = ctx.createLinearGradient(0,0,0,1080);
+      g.addColorStop(0, colTop); g.addColorStop(.55, colBottom); g.addColorStop(1, colDeep);
+      ctx.fillStyle = g; ctx.fillRect(0,0,1080,1080);
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.font = '700 52px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText('✿ Quirky Fortune', 540, 150);
+      const cx = 70, cy = 192, cw = 940, ch = 726;
+      roundRect(ctx, cx, cy, cw, ch, 72); ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.fillStyle = '#8e8e93';
+      ctx.font = '500 36px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText(formatDate(fortune.date), 540, 282);
+      const padX = 80, textW = cw - padX * 2;
+      const yTop = cy + 118, yBottom = cy + ch - 90;
+      let size = 58, lines = [];
+      while (size >= 30) {
+        ctx.font = `650 ${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+        lines = wrapLines(ctx, fortune.text, textW);
+        if (yTop + lines.length * size * 1.38 <= yBottom) break;
+        size -= 3;
+      }
+      const lineH = size * 1.38;
+      const blockH = lines.length * lineH;
+      const yStart = yTop + (yBottom - yTop - blockH) / 2 + size * 0.8;
+      ctx.fillStyle = '#1a1a1a';
+      lines.forEach((ln, i) => ctx.fillText(ln.trim(), 540, yStart + i * lineH));
+      ctx.fillStyle = 'rgba(142,142,147,.65)';
+      ctx.font = '500 30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText('quirky-fortune.app', 540, cy + ch - 38);
+      const link = document.createElement('a');
+      link.download = 'quirky-fortune.png'; link.href = canvas.toDataURL('image/png'); link.click();
+    };
     function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-    function wrap(ctx, text, x, y, maxWidth, lineHeight) { const words = text.split(' '); let line = ''; for (const word of words) { const test = line + word + ' '; if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x + maxWidth/2, y); line = word + ' '; y += lineHeight; } else line = test; } ctx.fillText(line, x + maxWidth/2, y); }
+    function wrapLines(ctx, text, maxWidth) { const words = text.split(' '); const lines = []; let line = ''; for (const w of words) { const t = line + w + ' '; if (ctx.measureText(t).width > maxWidth && line) { lines.push(line); line = w + ' '; } else line = t; } if (line) lines.push(line); return lines; }
     if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
     render();
   </script>
