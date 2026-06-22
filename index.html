@@ -90,11 +90,11 @@
     @keyframes blob2 { 0%,100% { transform: translate(0,0) scale(1); } 40% { transform: translate(-58px,42px) scale(.83); } 70% { transform: translate(38px,-52px) scale(1.22); } }
     @keyframes blob3 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(38px,48px); } }
     @keyframes blob4 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-42px,-38px); } }
-    @keyframes fortune-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fortune-in { from { transform: translateY(16px); } to { transform: translateY(0); } }
     .blob-extra { position: fixed; border-radius: 999px; background: rgba(255,255,255,.16); filter: blur(75px); pointer-events: none; }
     .blob-a { width: 270px; height: 270px; top: 40%; left: 22%; animation: blob3 24s ease-in-out infinite; }
     .blob-b { width: 200px; height: 200px; top: 16%; right: 16%; animation: blob4 17s ease-in-out infinite; }
-    .fortune-animate { animation: fortune-in .5s cubic-bezier(.22,.61,.36,1) forwards; }
+    .fortune-animate { animation: fortune-in .45s cubic-bezier(.22,.61,.36,1); }
   </style>
 </head>
 <body>
